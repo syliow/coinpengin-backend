@@ -45,15 +45,15 @@ app.post("/api/users/signup", async (req, res) => {
     const { firstName, lastName, email, password } = req.body;
     const userInfo = firstName && lastName && email && password;
 
-    // if (userInfo) {
-    //   res.status(200).send({
-    //     message: "User created successfully",
-    //   });
-    // } else {
-    //   res.status(400).send({
-    //     message: "Please enter all fields",
-    //   });
-    // }
+    if (userInfo) {
+      res.status(200).send({
+        message: "User created successfully",
+      });
+    } else {
+      res.status(400).send({
+        message: "Please enter all fields",
+      });
+    }
 
     const createUser = await db.collection("users").insertOne({
       firstName: firstName,
@@ -69,7 +69,45 @@ app.post("/api/users/signup", async (req, res) => {
     }
     res.send(true);
   } catch (err) {
-    errorHandler(err, req, res);
+    res.status(400).send({
+      message: err.message,
+    });
+  }
+});
+
+app.post("/api/users/signin", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    console.log(email, "email");
+    console.log(password, "password");
+
+    let user;
+    if (email && password) {
+      //here
+      user = await db.collection("users").findOne({
+        email: email,
+        password: password,
+      });
+      console.log(user, "User found ?");
+    } else {
+      res.status(400).send({
+        message: "Please enter all fields",
+      });
+    }
+
+    if (user) {
+      console.log("got user");
+      res.send(user);
+    } else {
+      console.log("erm no user?");
+      res.status(400).send({
+        message: "User not found",
+      });
+    }
+  } catch (err) {
+    res.status(401).send({
+      message: err.message,
+    });
   }
 });
 
