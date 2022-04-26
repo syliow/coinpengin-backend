@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import model from "./model.js";
 import userSchema from "./model.js";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 
 // const connectDB = require("./config/db");
 // import {connectDB} from "./config/db";
@@ -84,11 +85,11 @@ app.post("/api/users/signin", async (req, res) => {
     let user;
     if (email && password) {
       //here
+
       user = await db.collection("users").findOne({
         email: email,
         password: password,
       });
-      console.log(user, "User found ?");
     } else {
       res.status(400).send({
         message: "Please enter all fields",
@@ -97,9 +98,18 @@ app.post("/api/users/signin", async (req, res) => {
 
     if (user) {
       console.log("got user");
-      res.send(user);
+      const token = jwt.sign(
+        {
+          email: email,
+          password: password,
+        },
+        "secret"
+      );
+      res.json({
+        status: "Success!",
+        user: token,
+      });
     } else {
-      console.log("erm no user?");
       res.status(400).send({
         message: "User not found",
       });
