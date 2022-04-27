@@ -107,12 +107,12 @@ app.post("/api/users/signin", async (req, res) => {
         "secret"
       );
       res.json({
-        status: "Success!",
+        status: "Login Success!",
         user: token,
       });
     } else {
       res.status(400).send({
-        message: "User not found",
+        message: "Invalid email or password. Please try again.",
       });
     }
   } catch (err) {
