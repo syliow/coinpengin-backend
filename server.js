@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
 // import model from "./model.js";
 // import userSchema from "./model.js";
-const dotenv = require('dotenv');
-const jwt = require('jsonwebtoken');
+const dotenv = require("dotenv");
+const jwt = require("jsonwebtoken");
 // import userRoutes from "./routes/userRoutes.js";
 
 // const connectDB = require("./config/db");
@@ -122,7 +122,7 @@ app.post("/api/users/signin", async (req, res) => {
   }
 });
 
-app.use('/api/users', require('./routes/userRoutes'));
+app.use("/api/users", require("./routes/userRoutes"));
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);

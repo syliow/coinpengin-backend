@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const moment = require("moment");
+const { db } = require("../models/userModel");
 
 const registerUser = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
@@ -56,7 +57,6 @@ const signinUser = async (req, res) => {
       email: user.email,
       token: generateToken(user._id),
     });
-    
   } else {
     res.status(400);
     throw new Error("Invalid email or password");
@@ -74,6 +74,29 @@ const getUser = async (req, res) => {
   });
 };
 
+const addCoinToWishlist = async (req, res) => {
+  try {
+    const { coin } = req.body;
+    if (coin) {
+      const user = await db.collection("users").findOne({
+        email: req.body.user_email,
+      });
+      if (coin) {
+        await db
+          .collection("users")
+          .updateOne({ _id: user._id }, { $push: { wishlist: coin } });
+        res.status(200).json({
+          message: `${coin} added to wishlist`,
+        });
+      }
+    }
+  } catch (err) {
+    res.status(401).send({
+      message: err.message,
+    });
+  }
+};
+
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "1d",
@@ -84,4 +107,5 @@ module.exports = {
   registerUser,
   signinUser,
   getUser,
+  addCoinToWishlist,
 };
