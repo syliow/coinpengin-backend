@@ -81,12 +81,23 @@ const addCoinToWishlist = async (req, res) => {
       const user = await db.collection("users").findOne({
         email: req.body.user_email,
       });
-      if (coin) {
+      //check if coin already exist in user's wishlist
+      const coinExist = user.wishlist?.find((c) => c === coin);
+
+      if (coin && !coinExist) {
+        console.log("add coin");
         await db
           .collection("users")
           .updateOne({ _id: user._id }, { $push: { wishlist: coin } });
         res.status(200).json({
           message: `${coin} added to wishlist`,
+        });
+      } else {
+        await db
+          .collection("users")
+          .updateOne({ _id: user._id }, { $pull: { wishlist: coin } });
+        res.status(200).json({
+          message: `${coin} removed from wishlist`,
         });
       }
     }
