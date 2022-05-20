@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const moment = require("moment");
+const axios = require('axios').default;
 const { db } = require("../models/userModel");
 
 const registerUser = async (req, res) => {
@@ -48,6 +49,7 @@ const signinUser = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email: email });
+  console.log(user, "user okay");
 
   if (user && (await bcrypt.compare(password, user.password))) {
     res.json({
@@ -58,19 +60,32 @@ const signinUser = async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    res.status(400);
-    throw new Error("Invalid email or password");
+    res.status(400).json ({
+      message: "Invalid email or password"
+    })
   }
 };
 
 const getUser = async (req, res) => {
-  const { _id, firstName, lastName, email } = await User.findById(req.user.id);
+  const { _id, firstName, lastName, email, wishlist } = await User.findById(
+    req.user.id
+  );
+  const coinData = await axios.get(
+    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
+  ).then ((response) => {
+    return response.data;
+  });
+
+  // //find the coin from coindata that matches with the coin in wishlist
+  const matchedData = coinData.filter((c) => wishlist.includes(c.name));
+
 
   res.status(200).json({
     id: _id,
     firstName: firstName,
     lastName: lastName,
     email: email,
+    wishlist: matchedData,
   });
 };
 
