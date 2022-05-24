@@ -9,8 +9,7 @@ const registerUser = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
   if (!firstName || !lastName || !email || !password) {
-    res.status(400);
-    res.status(400).json({
+    return res.status(400).json({
       message: "Please enter all required fields.",
     });
   }
@@ -18,7 +17,7 @@ const registerUser = async (req, res) => {
   const userExist = await User.findOne({ email: email });
 
   if (userExist) {
-    res.status(400).json({
+    return res.status(400).json({
       message: "User already exists.",
     });
   }
@@ -34,7 +33,7 @@ const registerUser = async (req, res) => {
   });
 
   if (user) {
-    res.status(201).json({
+    return res.status(201).json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -43,8 +42,9 @@ const registerUser = async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    res.status(400);
-    throw new Error("User not created");
+    return res.status(400).json({
+      message: "User could not be created.",
+    });
   }
 };
 
@@ -52,10 +52,9 @@ const signinUser = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email: email });
-  console.log(user, "user okay");
 
   if (user && (await bcrypt.compare(password, user.password))) {
-    res.json({
+    return res.json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -63,7 +62,7 @@ const signinUser = async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    res.status(400).json({
+    return res.status(400).json({
       message: "Invalid email or password",
     });
   }
@@ -81,10 +80,9 @@ const getUser = async (req, res) => {
       return response.data;
     });
 
-  // //find the coin from coindata that matches with the coin in wishlist
   const matchedData = coinData.filter((c) => wishlist.includes(c.name));
 
-  res.status(200).json({
+  return res.status(200).json({
     id: _id,
     firstName: firstName,
     lastName: lastName,
@@ -108,20 +106,20 @@ const addCoinToWishlist = async (req, res) => {
         await db
           .collection("users")
           .updateOne({ _id: user._id }, { $push: { wishlist: coin } });
-        res.status(200).json({
+        return res.status(200).json({
           message: `${coin} added to wishlist`,
         });
       } else {
         await db
           .collection("users")
           .updateOne({ _id: user._id }, { $pull: { wishlist: coin } });
-        res.status(200).json({
+        return res.status(200).json({
           message: `${coin} removed from wishlist`,
         });
       }
     }
   } catch (err) {
-    res.status(401).send({
+    return res.status(401).send({
       message: err.message,
     });
   }
