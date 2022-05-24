@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const moment = require("moment");
-const axios = require('axios').default;
+const axios = require("axios").default;
 const { db } = require("../models/userModel");
 
 const registerUser = async (req, res) => {
@@ -10,14 +10,17 @@ const registerUser = async (req, res) => {
 
   if (!firstName || !lastName || !email || !password) {
     res.status(400);
-    throw new Error("Please enter all fields");
+    res.status(400).json({
+      message: "Please enter all required fields.",
+    });
   }
 
   const userExist = await User.findOne({ email: email });
 
   if (userExist) {
-    res.status(400);
-    throw new Error("User already exist");
+    res.status(400).json({
+      message: "User already exists.",
+    });
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -60,9 +63,9 @@ const signinUser = async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    res.status(400).json ({
-      message: "Invalid email or password"
-    })
+    res.status(400).json({
+      message: "Invalid email or password",
+    });
   }
 };
 
@@ -70,15 +73,16 @@ const getUser = async (req, res) => {
   const { _id, firstName, lastName, email, wishlist } = await User.findById(
     req.user.id
   );
-  const coinData = await axios.get(
-    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
-  ).then ((response) => {
-    return response.data;
-  });
+  const coinData = await axios
+    .get(
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
+    )
+    .then((response) => {
+      return response.data;
+    });
 
   // //find the coin from coindata that matches with the coin in wishlist
   const matchedData = coinData.filter((c) => wishlist.includes(c.name));
-
 
   res.status(200).json({
     id: _id,
