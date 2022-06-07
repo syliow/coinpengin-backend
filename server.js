@@ -1,19 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-// import model from "./model.js";
-// import userSchema from "./model.js";
 const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
-// import userRoutes from "./routes/userRoutes.js";
-
-// const connectDB = require("./config/db");
-// import {connectDB} from "./config/db";
-dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
-// let single_sku_db = dbo_new.db(SINGLE_SKU_DB_NAME);
-// const connectDB = "./config/db.js";
+dotenv.config();
 
 app.use(cors());
 app.use(express.json());
@@ -31,15 +23,10 @@ db.once("open", () => {
   console.log("Connected to mongoDB");
 });
 
-// dotenv.config();
-// connectDB();
-
-app.get("/api", (req, res) => {
+app.get("/welcome", (req, res) => {
   res.status(200).send({
-    name: "Hello",
-    size: "Small",
+    message: "Welcome to CoinPengin Backend Server",
   });
-  // res.json("Hello World from BE");
 });
 
 app.post("/api/users/signup", async (req, res) => {
@@ -85,8 +72,6 @@ app.post("/api/users/signin", async (req, res) => {
 
     let user;
     if (email && password) {
-      //here
-
       user = await db.collection("users").findOne({
         email: email,
         password: password,
