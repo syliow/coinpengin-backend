@@ -5,7 +5,7 @@
 This is the backend for Coinpengin. It is a simple server in Node.js using Express that stores and retrieves data from a MongoDB Database.
 
 ### ✨ [View Live Website here](https://coin-pengin.netlify.app/)
-### ⚙️ [Backend Deployed on Heroku](https://crypto-price-tracker-backend.herokuapp.com/)
+### ⚙️ [2025 UPDATE: Backend Deployed on Render](https://coinpengin-backend.onrender.com/welcome) <- Might take 1 min to wakeup from idle due to free plan limit
 
 ## Features
 - Fetch user data from MongoDB database collection.
@@ -19,10 +19,6 @@ This is the backend for Coinpengin. It is a simple server in Node.js using Expre
 2. Run `npm install` to install all the dependencies.
 3. Run `npm run dev` to start the project.
 4. Great! You will now have access to Coinpengin backend on your localhost at `localhost:5000`. 
-
-## Deployment
-
-- Deployed on [Heroku](https://www.heroku.com/)
 
 ## Technologies Used
 
