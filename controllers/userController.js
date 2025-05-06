@@ -80,10 +80,13 @@ const getUser = async (req, res) => {
       const response = await axios.get(
        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&x_cg_demo_api_key=${coingeckoApiKey}`
       );
+      console.log("🚀 ~ getUser ~ response:", response)
       coinData = response.data;
+      console.log("🚀 ~ getUser ~ coinData:", coinData)
     } catch (axiosError) {
+      console.error("🚀 ~ getUser ~ axiosError:", axiosError);
       // Handle the error gracefully
-      return res.status(502).json({ message: "Failed to fetch coin data from CoinGecko." });
+      // return res.status(502).json({ message: "Failed to fetch coin data from CoinGecko." });
     }
 
     const matchedData = coinData.filter((c) => wishlist.includes(c.name));
