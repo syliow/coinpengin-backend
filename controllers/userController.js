@@ -90,6 +90,8 @@ const getUser = async (req, res) => {
     }
 
     const matchedData = coinData.filter((c) => wishlist.includes(c.name));
+    console.log("🚀 ~ getUser ~ wishlist:", wishlist)
+    console.log("🚀 ~ getUser ~ coinData:", coinData)
 
     return res.status(200).json({
       id: _id,
