@@ -78,11 +78,17 @@ const getUser = async (req, res) => {
     console.log(coingeckoApiKey);
     try {
       const response = await axios.get(
-       `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&x_cg_demo_api_key=${coingeckoApiKey}`
+        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false`,
+        {
+          headers: {
+            "x-cg-demo-api-key": coingeckoApiKey,
+            Accept: "application/json",
+          },
+        }
       );
-      console.log("🚀 ~ getUser ~ response:", response)
+      console.log("🚀 ~ getUser ~ response:", response);
       coinData = response.data;
-      console.log("🚀 ~ getUser ~ coinData:", coinData)
+      console.log("🚀 ~ getUser ~ coinData:", coinData);
     } catch (axiosError) {
       console.error("🚀 ~ getUser ~ axiosError:", axiosError);
       // Handle the error gracefully
@@ -90,8 +96,8 @@ const getUser = async (req, res) => {
     }
 
     const matchedData = coinData.filter((c) => wishlist.includes(c.name));
-    console.log("🚀 ~ getUser ~ wishlist:", wishlist)
-    console.log("🚀 ~ getUser ~ coinData:", coinData)
+    console.log("🚀 ~ getUser ~ wishlist:", wishlist);
+    console.log("🚀 ~ getUser ~ coinData:", coinData);
 
     return res.status(200).json({
       id: _id,
