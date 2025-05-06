@@ -69,26 +69,33 @@ const signinUser = async (req, res) => {
 };
 
 const getUser = async (req, res) => {
-  const { _id, firstName, lastName, email, wishlist } = await User.findById(
-    req.user.id
-  );
-  const coinData = await axios
-    .get(
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
-    )
-    .then((response) => {
-      return response.data;
+  try {
+    const { _id, firstName, lastName, email, wishlist } = await User.findById(
+      req.user.id
+    );
+    let coinData = [];
+    try {
+      const response = await axios.get(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
+      );
+      coinData = response.data;
+    } catch (axiosError) {
+      // Handle the error gracefully
+      return res.status(502).json({ message: "Failed to fetch coin data from CoinGecko." });
+    }
+
+    const matchedData = coinData.filter((c) => wishlist.includes(c.name));
+
+    return res.status(200).json({
+      id: _id,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      wishlist: matchedData,
     });
-
-  const matchedData = coinData.filter((c) => wishlist.includes(c.name));
-
-  return res.status(200).json({
-    id: _id,
-    firstName: firstName,
-    lastName: lastName,
-    email: email,
-    wishlist: matchedData,
-  });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
 };
 
 const addCoinToWishlist = async (req, res) => {
