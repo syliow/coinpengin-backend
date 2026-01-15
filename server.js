@@ -1,114 +1,86 @@
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const jwt = require("jsonwebtoken");
-const app = express();
-const port = process.env.PORT || 5000;
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const helmet = require('helmet');
+const compression = require('compression');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const { errorHandler, notFound } = require('./middleware/errorMiddleware');
+
+// Load environment variables
 dotenv.config();
 
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URL', 'JWT_SECRET'];
+requiredEnvVars.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    console.error(`Error: ${envVar} is not defined in environment variables`);
+    process.exit(1);
+  }
+});
+
+const app = express();
+const port = process.env.PORT || 5000;
+
+// Database connection
+const connectDB = require('./config/db');
+connectDB();
+
+// Security middleware
+app.use(helmet());
+
+// Compression middleware
+app.use(compression());
+
+// CORS middleware
 app.use(cors());
+
+// Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-const mongoURI = process.env.MONGO_URL;
+// Apply general rate limiter to all routes
+app.use('/api/', apiLimiter);
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-const db = mongoose.connection;
-
-db.once("open", () => {
-  console.log("Connected to mongoDB");
-});
-
-app.get("/welcome", (req, res) => {
-  res.status(200).send({
-    message: "Welcome to CoinPengin Backend Server",
+// Routes
+app.get('/welcome', (req, res) => {
+  res.status(200).json({
+    message: 'Welcome to CoinPengin Backend Server',
+    version: '2.0.0',
+    status: 'running'
   });
 });
 
-app.post("/api/users/signup", async (req, res) => {
-  try {
-    const { firstName, lastName, email, password } = req.body;
-    const userInfo = firstName && lastName && email && password;
+// User routes
+app.use('/api/users', require('./routes/userRoutes'));
 
-    if (userInfo) {
-      res.status(200).send({
-        message: "User created successfully",
-      });
-    } else {
-      res.status(400).send({
-        message: "Please enter all fields",
-      });
-    }
+// Coin routes (Proxy to CoinGecko)
+app.use('/api/coins', require('./routes/coinRoutes'));
 
-    const createUser = await db.collection("users").insertOne({
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: password,
-    });
+// 404 handler - must be after all routes
+app.use(notFound);
 
-    if (!createUser) {
-      res.status(400).send({
-        message: "User not created",
-      });
-    }
-    res.send(true);
-  } catch (err) {
-    res.status(400).send({
-      message: err.message,
-    });
-  }
-});
+// Error handler - must be last
+app.use(errorHandler);
 
-app.post("/api/users/signin", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log(email, "email");
-    console.log(password, "password");
-
-    let user;
-    if (email && password) {
-      user = await db.collection("users").findOne({
-        email: email,
-        password: password,
-      });
-    } else {
-      res.status(400).send({
-        message: "Please enter all fields",
-      });
-    }
-
-    if (user) {
-      console.log("got user");
-      const token = jwt.sign(
-        {
-          email: email,
-          password: password,
-        },
-        "secret"
-      );
-      res.json({
-        status: "Login Success!",
-        user: token,
-      });
-    } else {
-      res.status(400).send({
-        message: "Invalid email or password. Please try again.",
-      });
-    }
-  } catch (err) {
-    res.status(401).send({
-      message: err.message,
-    });
-  }
-});
-
-app.use("/api/users", require("./routes/userRoutes"));
-
-app.listen(port, () => {
+// Start server
+const server = app.listen(port, () => {
   console.log(`Server started on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
 });

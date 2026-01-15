@@ -1,60 +1,76 @@
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const User = require("../models/userModel");
-const moment = require("moment");
-const axios = require("axios").default;
-const { db } = require("../models/userModel");
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const asyncHandler = require('express-async-handler');
+const User = require('../models/userModel');
+const coingeckoService = require('../services/coingeckoService');
 
-const registerUser = async (req, res) => {
+/**
+ * @desc    Register a new user
+ * @route   POST /api/users/register
+ * @access  Public
+ */
+const registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
+  // Validate input
   if (!firstName || !lastName || !email || !password) {
-    return res.status(400).json({
-      message: "Please enter all required fields.",
-    });
+    res.status(400);
+    throw new Error('Please enter all required fields');
   }
 
-  const userExist = await User.findOne({ email: email });
-
-  if (userExist) {
-    return res.status(400).json({
-      message: "User already exists.",
-    });
+  // Check if user already exists
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists');
   }
 
+  // Hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
+  // Create user
   const user = await User.create({
-    firstName: firstName,
-    lastName: lastName,
-    email: email,
+    firstName,
+    lastName,
+    email,
     password: hashedPassword,
   });
 
   if (user) {
-    return res.status(201).json({
+    res.status(201).json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      created_at: moment(user.created_at),
       token: generateToken(user._id),
     });
   } else {
-    return res.status(400).json({
-      message: "User could not be created.",
-    });
+    res.status(400);
+    throw new Error('Invalid user data');
   }
-};
+});
 
-const signinUser = async (req, res) => {
+/**
+ * @desc    Sign in a user
+ * @route   POST /api/users/login
+ * @access  Public
+ */
+const signinUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email: email });
+  // Validate input
+  if (!email || !password) {
+    res.status(400);
+    throw new Error('Please enter all fields');
+  }
 
+  // Find user by email
+  const user = await User.findOne({ email });
+
+  // Check user and password
   if (user && (await bcrypt.compare(password, user.password))) {
-    return res.json({
+    res.json({
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -62,81 +78,106 @@ const signinUser = async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    return res.status(400).json({
-      message: "Invalid email or password",
-    });
+    res.status(401);
+    throw new Error('Invalid email or password');
   }
-};
+});
 
-const getUser = async (req, res) => {
-  try {
-    const { _id, firstName, lastName, email, wishlist } = await User.findById(
-      req.user.id
-    );
-    let coinData = [];
-    const coingeckoApiKey = process.env.COINGECKO_API_KEY;
-    console.log(coingeckoApiKey);
+/**
+ * @desc    Get user data with wishlist
+ * @route   GET /api/users/get
+ * @access  Private
+ */
+const getUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  let wishlistData = [];
+
+  // If user has coins in wishlist, fetch their current data from CoinGecko
+  if (user.wishlist && user.wishlist.length > 0) {
     try {
-      const response = await axios.get(
-       `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&x_cg_demo_api_key=${coingeckoApiKey}`
+      // Fetch market data using the service (which includes caching)
+      const coinData = await coingeckoService.getMarketData('usd', 250, 1);
+      
+      // Match wishlist coins with current market data
+      wishlistData = coinData.filter((coin) => 
+        user.wishlist.includes(coin.name)
       );
-      coinData = response.data;
-    } catch (axiosError) {
-      // Handle the error gracefully
-      return res.status(502).json({ message: "Failed to fetch coin data from CoinGecko." });
+    } catch (error) {
+      console.error('Error fetching CoinGecko data:', error.message);
+      // Don't fail the whole request if CoinGecko is down
+      // Return user data without wishlist details
     }
-
-    const matchedData = coinData.filter((c) => wishlist.includes(c.name));
-
-    return res.status(200).json({
-      id: _id,
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      wishlist: matchedData,
-    });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
   }
-};
 
-const addCoinToWishlist = async (req, res) => {
-  try {
-    const { coin } = req.body;
-    if (coin) {
-      const user = await db.collection("users").findOne({
-        email: req.body.user_email,
-      });
-      //check if coin already exist in user's wishlist
-      const coinExist = user.wishlist?.find((c) => c === coin);
+  res.status(200).json({
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    wishlist: wishlistData,
+  });
+});
 
-      if (coin && !coinExist) {
-        console.log("add coin");
-        await db
-          .collection("users")
-          .updateOne({ _id: user._id }, { $push: { wishlist: coin } });
-        return res.status(200).json({
-          message: `${coin} added to wishlist`,
-        });
-      } else {
-        await db
-          .collection("users")
-          .updateOne({ _id: user._id }, { $pull: { wishlist: coin } });
-        return res.status(200).json({
-          message: `${coin} removed from wishlist`,
-        });
-      }
-    }
-  } catch (err) {
-    return res.status(401).send({
-      message: err.message,
+/**
+ * @desc    Add or remove coin from wishlist
+ * @route   POST /api/users/wishlist
+ * @access  Private (should be authenticated)
+ */
+const addCoinToWishlist = asyncHandler(async (req, res) => {
+  const { coin, user_email } = req.body;
+
+  // Validate input
+  if (!coin || !user_email) {
+    res.status(400);
+    throw new Error('Please provide coin and user email');
+  }
+
+  // Find user
+  const user = await User.findOne({ email: user_email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Check if coin already exists in wishlist
+  const coinExists = user.wishlist?.includes(coin);
+
+  if (!coinExists) {
+    // Add coin to wishlist
+    user.wishlist.push(coin);
+    await user.save();
+    
+    res.status(200).json({
+      message: `${coin} added to wishlist`,
+      wishlist: user.wishlist,
+    });
+  } else {
+    // Remove coin from wishlist
+    user.wishlist = user.wishlist.filter((c) => c !== coin);
+    await user.save();
+    
+    res.status(200).json({
+      message: `${coin} removed from wishlist`,
+      wishlist: user.wishlist,
     });
   }
-};
+});
 
+/**
+ * Generate JWT token
+ * @param {string} id - User ID
+ * @returns {string} JWT token
+ */
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "1d",
+    expiresIn: '30d', // Extended token lifetime
   });
 };
 
