@@ -1,0 +1,42 @@
+[build]
+  # No build command needed - using raw source files
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Include necessary files for the function
+[functions."api"]
+  included_files = [
+    "models/**",
+    "services/**",
+    "config/**",
+    "middleware/**",
+    "controllers/**",
+    "routes/**"
+  ]
+
+# Redirect all API requests to the serverless function
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/welcome"
+  to = "/.netlify/functions/api/welcome"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
